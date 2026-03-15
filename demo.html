@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>RoleReady Demo</title>
+  <style>
+    body { font-family: sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; }
+    input, textarea { width: 100%; padding: 8px; margin: 8px 0; box-sizing: border-box; }
+    button { background: #3b82f6; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; }
+    #result { background: #f1f5f9; padding: 16px; margin-top: 16px; white-space: pre-wrap; border-radius: 8px; }
+    .error { color: red; }
+  </style>
+</head>
+<body>
+  <h1> RoleReady: AI Resume Tailoring</h1>
+  
+  <h2>Step 1: Extract Job Description</h2>
+  <input id="url" placeholder="Paste job URL here..." />
+  <button onclick="extractJob()">Extract JD</button>
+  
+  <h2>Step 2: Your Resume</h2>
+  <textarea id="resume" rows="8" placeholder="Paste your resume text here..."></textarea>
+  
+  <button onclick="fitScore()" style="background:#8b5cf6"> Get Fit Score</button>
+  <button onclick="tailorResume()" style="margin-left:8px"> Tailor Resume</button>
+  
+  <div id="result">Results will appear here...</div>
+
+<script>
+const API = 'http://localhost:5000';
+
+async function extractJob() {
+  const url = document.getElementById('url').value;
+  document.getElementById('result').textContent = 'Extracting...';
+  try {
+    const r = await fetch(API + '/extract-job', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({url})
+    });
+    const data = await r.json();
+    document.getElementById('result').textContent = data.job_description || data.error;
+  } catch(e) {
+    document.getElementById('result').innerHTML = '<span class="error">Error: ' + e.message + '</span>';
+  }
+}
+
+async function fitScore() {
+  const resume = document.getElementById('resume').value;
+  const jd = document.getElementById('result').textContent;
+  document.getElementById('result').textContent = 'Calculating fit score...';
+  try {
+    const r = await fetch(API + '/fit-score', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({resume, job_description: jd})
+    });
+    const data = await r.json();
+    document.getElementById('result').textContent = 
+      `Score: ${data.score}% — ${data.label}\n\n${data.explanation}`;
+  } catch(e) {
+    document.getElementById('result').innerHTML = '<span class="error">Error: ' + e.message + '</span>';
+  }
+}
+
+async function tailorResume() {
+  const resume = document.getElementById('resume').value;
+  const jd = document.getElementById('result').textContent;
+  document.getElementById('result').textContent = 'Tailoring resume...';
+  try {
+    const r = await fetch(API + '/edit-resume', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({resume, job_description: jd})
+    });
+    const data = await r.json();
+    document.getElementById('result').textContent = data.tailored_resume || data.error;
+  } catch(e) {
+    document.getElementById('result').innerHTML = '<span class="error">Error: ' + e.message + '</span>';
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>RoleReady Demo</title>
+  <style>
+    body { font-family: sans-serif; max-width: 900px; margin: 40px auto; padding: 20px; background: #f8fafc; }
+    h1 { color: #1e40af; }
+    h2 { color: #374151; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; }
+    textarea, input { width: 100%; padding: 10px; margin: 8px 0; box-sizing: border-box; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+    .btn { padding: 10px 24px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; margin-right: 8px; }
+    .blue { background: #3b82f6; color: white; }
+    .purple { background: #8b5cf6; color: white; }
+    .green { background: #10b981; color: white; }
+    #result { background: white; padding: 16px; margin-top: 16px; white-space: pre-wrap; border-radius: 8px; border: 1px solid #e5e7eb; min-height: 100px; font-size: 14px; }
+    .error { color: #ef4444; }
+    .score { font-size: 48px; font-weight: bold; color: #1e40af; text-align: center; }
+    .label { font-size: 20px; text-align: center; color: #374151; }
+    .loading { color: #6b7280; font-style: italic; }
+    .row { display: flex; gap: 16px; }
+    .col { flex: 1; }
+  </style>
+</head>
+<body>
+  <h1>🎯 RoleReady — AI Resume Tailoring</h1>
+  <p style="color:#6b7280">Powered by Amazon Nova via AWS Bedrock</p>
+
+  <div class="row">
+    <div class="col">
+      <h2>Job Description</h2>
+      <input id="url" placeholder="Paste job URL (optional)..." />
+      <button class="btn blue" onclick="extractJob()">🔗 Extract from URL</button>
+      <p style="color:#6b7280;font-size:12px">— or paste directly below —</p>
+      <textarea id="jd" rows="10" placeholder="Paste job description here..."></textarea>
+    </div>
+    <div class="col">
+      <h2>Your Resume</h2>
+      <textarea id="resume" rows="13" placeholder="Paste your resume text here..."></textarea>
+    </div>
+  </div>
+
+  <div style="margin-top:16px">
+    <button class="btn purple" onclick="fitScore()">⚡ Get Fit Score</button>
+    <button class="btn green" onclick="tailorResume()">✨ Tailor Resume</button>
+  </div>
+
+  <h2>Results</h2>
+  <div id="result">Results will appear here...</div>
+
+<script>
+const API = '';
+
+async function extractJob() {
+  const url = document.getElementById('url').value.trim();
+  if (!url) return;
+  document.getElementById('result').innerHTML = '<span class="loading">Extracting job description...</span>';
+  try {
+    const r = await fetch(API + '/extract-job', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({url})
+    });
+    const data = await r.json();
+    if (data.error) throw new Error(data.error);
+    document.getElementById('jd').value = data.job_description;
+    document.getElementById('result').textContent = '✅ Job description extracted! Review it on the left.';
+  } catch(e) {
+    document.getElementById('result').innerHTML = '<span class="error">❌ ' + e.message + '</span>';
+  }
+}
+
+async function fitScore() {
+  const resume = document.getElementById('resume').value.trim();
+  const jd = document.getElementById('jd').value.trim();
+  if (!resume || !jd) { alert('Please fill in both resume and job description'); return; }
+  document.getElementById('result').innerHTML = '<span class="loading">Calculating fit score with Amazon Nova...</span>';
+  try {
+    const r = await fetch(API + '/fit-score', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({resume, job_description: jd})
+    });
+    const data = await r.json();
+    if (data.error) throw new Error(data.error);
+    document.getElementById('result').innerHTML = 
+      '<div class="score">' + data.score + '%</div>' +
+      '<div class="label">' + data.label + '</div>' +
+      '<p style="margin-top:16px">' + data.explanation + '</p>';
+  } catch(e) {
+    document.getElementById('result').innerHTML = '<span class="error">❌ ' + e.message + '</span>';
+  }
+}
+
+async function tailorResume() {
+  const resume = document.getElementById('resume').value.trim();
+  const jd = document.getElementById('jd').value.trim();
+  if (!resume || !jd) { alert('Please fill in both resume and job description'); return; }
+  document.getElementById('result').innerHTML = '<span class="loading">Tailoring resume with Amazon Nova...</span>';
+  try {
+    const r = await fetch(API + '/edit-resume', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({resume, job_description: jd})
+    });
+    const data = await r.json();
+    if (data.error) throw new Error(data.error);
+    document.getElementById('result').textContent = data.tailored_resume;
+  } catch(e) {
+    document.getElementById('result').innerHTML = '<span class="error">❌ ' + e.message + '</span>';
+  }
+}
+</script>
+</body>
+</html>

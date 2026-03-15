@@ -1,0 +1,25 @@
+import React from 'react';
+
+interface LogoProps {
+  size?: number;
+  showText?: boolean;
+  className?: string;
+}
+
+export function Logo({ size = 32, showText = true, className = '' }: LogoProps) {
+  return (
+    <div className={`flex items-center gap-2 ${className}`}>
+      <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
+        <rect width="32" height="32" rx="8" fill="#5B6CFF"/>
+        <path d="M8 10.5C8 9.67157 8.67157 9 9.5 9H13.5C15.7091 9 17.5 10.7909 17.5 13C17.5 14.3807 16.8807 15.6307 15.8807 16.4393L18.5 23H15.5L13.25 17.5H11V23H8V10.5ZM11 11.5V15H13.5C14.3284 15 15 14.3284 15 13.5V13C15 12.1716 14.3284 11.5 13.5 11.5H11Z" fill="white"/>
+        <path d="M19.5 10.5C19.5 9.67157 20.1716 9 21 9H25C26.1046 9 27 9.89543 27 11V13C27 14.1046 26.1046 15 25 15H22.5V17H26V19H22.5V21.5C22.5 22.3284 21.8284 23 21 23C20.1716 23 19.5 22.3284 19.5 21.5V10.5ZM22.5 11V13H25V11H22.5Z" fill="white"/>
+      </svg>
+      {showText && (
+        <div className="flex flex-col">
+          <span className="text-lg font-bold text-slate-800">RoleReady</span>
+          <span className="text-xs text-slate-500 -mt-1">Resume Tailor</span>
+        </div>
+      )}
+    </div>
+  );
+}

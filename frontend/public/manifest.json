@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "RoleReady",
+  "version": "1.0.0",
+  "description": "AI-powered resume tailoring for job applications.",
+  "permissions": ["storage", "activeTab", "scripting", "contextMenus"],
+  "host_permissions": ["*://*.linkedin.com/*", "http://localhost:5000/*", "*://*/*"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "RoleReady - Tailor Your Resume",
+    "default_icon": { "16": "icons/icon-16.png", "32": "icons/icon-32.png", "48": "icons/icon-48.png", "128": "icons/icon-128.png" }
+  },
+  "background": { "service_worker": "background.js", "type": "module" },
+  "content_scripts": [{ "matches": ["*://*.linkedin.com/jobs/*", "*://*/*"], "js": ["content-script.js"], "run_at": "document_idle" }],
+  "options_page": "options.html",
+  "icons": { "16": "icons/icon-16.png", "32": "icons/icon-32.png", "48": "icons/icon-48.png", "128": "icons/icon-128.png" },
+  "web_accessible_resources": [{ "resources": ["icons/*", "logo.svg"], "matches": ["<all_urls>"] }]
+}

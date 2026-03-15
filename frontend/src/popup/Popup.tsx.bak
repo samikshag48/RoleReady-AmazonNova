@@ -1,0 +1,204 @@
+import React, { useState, useEffect } from 'react';
+import { Scan, User, FileText, Settings, Zap } from 'lucide-react';
+import ScanTab from './tabs/ScanTab';
+import ProfileTab from './tabs/ProfileTab';
+import ResumeTab from './tabs/ResumeTab';
+import SettingsTab from './tabs/SettingsTab';
+import type { UserProfile, JobDescription, AppSettings } from '../types';
+
+type TabType = 'scan' | 'profile' | 'resume' | 'settings';
+
+interface PopupState {
+  activeTab: TabType;
+  profile: UserProfile | null;
+  jobDescription: JobDescription | null;
+  settings: AppSettings;
+  loading: boolean;
+}
+
+const Popup: React.FC = () => {
+  const [state, setState] = useState<PopupState>({
+    activeTab: 'scan',
+    profile: null,
+    jobDescription: null,
+    settings: {
+      theme: 'light',
+      onboardingCompleted: false,
+      dataExportEnabled: true,
+    },
+    loading: true,
+  });
+
+  useEffect(() => {
+    loadInitialData();
+  }, []);
+
+  const loadInitialData = async () => {
+    try {
+      const [profileResponse, jdResponse, settingsResponse] = await Promise.all([
+        sendMessage({ type: 'GET_PROFILE' }),
+        sendMessage({ type: 'GET_JD' }),
+        getFromStorage(['appSettings']),
+      ]);
+
+      const profile = profileResponse.success ? profileResponse.data : null;
+      const jobDescription = jdResponse.success ? jdResponse.data : null;
+      const settings = settingsResponse.appSettings || state.settings;
+
+      setState(prev => ({
+        ...prev,
+        profile,
+        jobDescription,
+        settings,
+        loading: false,
+        activeTab: !settings.onboardingCompleted && !profile ? 'profile' : 'scan',
+      }));
+    } catch (error) {
+      console.error('Failed to load initial data:', error);
+      setState(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+  const sendMessage = (message: any): Promise<any> => {
+    return new Promise((resolve) => {
+      chrome.runtime.sendMessage(message, resolve);
+    });
+  };
+
+  const getFromStorage = (keys: string[]): Promise<any> => {
+    return new Promise((resolve) => {
+      chrome.storage.sync.get(keys, resolve);
+    });
+  };
+
+  const setInStorage = (data: any): Promise<void> => {
+    return new Promise((resolve) => {
+      chrome.storage.sync.set(data, resolve);
+    });
+  };
+
+  const handleTabChange = (tab: TabType) => {
+    setState(prev => ({ ...prev, activeTab: tab }));
+  };
+
+  const updateProfile = (profile: UserProfile) => {
+    setState(prev => ({ ...prev, profile }));
+  };
+
+  const updateJobDescription = (jobDescription: JobDescription | null) => {
+    setState(prev => ({ ...prev, jobDescription }));
+  };
+
+  const updateSettings = async (settings: AppSettings) => {
+    setState(prev => ({ ...prev, settings }));
+    await setInStorage({ appSettings: settings });
+  };
+
+  if (state.loading) {
+    return (
+      <div className="w-80 h-96 flex items-center justify-center bg-gray-50">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-gray-600">Loading RoleReady...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const tabs = [
+    { id: 'scan', label: 'Scan JD', icon: Scan },
+    { id: 'profile', label: 'Profile', icon: User },
+    { id: 'resume', label: 'Resume', icon: FileText },
+    { id: 'settings', label: 'Settings', icon: Settings },
+  ] as const;
+
+  const hasJobDescription = !!state.jobDescription;
+  const hasProfile = !!(state.profile && state.profile.basics.name);
+
+  return (
+    <div className="w-80 h-96 bg-white flex flex-col">
+      {/* Header */}
+      <div className="flex items-center gap-3 p-4 border-b border-gray-200 bg-gradient-to-r from-primary to-accent">
+        <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
+          <span className="text-primary font-bold text-sm">RR</span>
+        </div>
+        <div className="text-white">
+          <h1 className="font-semibold text-lg">RoleReady</h1>
+        </div>
+        {hasJobDescription && hasProfile && (
+          <div className="ml-auto">
+            <Zap size={16} className="text-yellow-300" />
+          </div>
+        )}
+      </div>
+
+      {/* Tab Navigation */}
+      <div className="flex border-b border-gray-200">
+        {tabs.map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            onClick={() => handleTabChange(id)}
+            className={`flex-1 flex flex-col items-center py-2 px-1 text-xs font-medium transition-colors ${
+              state.activeTab === id
+                ? 'text-primary border-b-2 border-primary bg-primary/5'
+                : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+            }`}
+          >
+            <Icon size={16} className="mb-1" />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab Content */}
+      <div className="flex-1 overflow-hidden">
+        {state.activeTab === 'scan' && (
+          <ScanTab
+            jobDescription={state.jobDescription}
+            onJobDescriptionUpdate={updateJobDescription}
+          />
+        )}
+        {state.activeTab === 'profile' && (
+          <ProfileTab
+            profile={state.profile}
+            onProfileUpdate={updateProfile}
+          />
+        )}
+        {state.activeTab === 'resume' && (
+          <ResumeTab
+            profile={state.profile}
+            jobDescription={state.jobDescription}
+          />
+        )}
+        {state.activeTab === 'settings' && (
+          <SettingsTab
+            settings={state.settings}
+            onSettingsUpdate={updateSettings}
+            profile={state.profile}
+            onProfileUpdate={updateProfile}
+          />
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="px-4 py-2 border-t border-gray-200 bg-gray-50">
+        <div className="flex justify-between items-center text-xs text-gray-500">
+          <span>
+            {hasProfile ? '✓ Profile Ready' : '○ Setup Profile'}
+          </span>
+          <span>
+            {hasJobDescription ? '✓ JD Scanned' : '○ No JD'}
+          </span>
+          <button
+            onClick={() => chrome.runtime.openOptionsPage()}
+            className="text-primary hover:underline"
+          >
+            Full Editor
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Popup;
